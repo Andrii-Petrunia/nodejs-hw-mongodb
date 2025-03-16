@@ -1,9 +1,43 @@
 import createHttpError from 'http-errors';
 import { Contact } from '../models/contact.model.js';
+import { calculatePaginationData } from '../utils/calculatePaginationData.js';
+import { SORT_ORDER } from '../constants/index.js';
 
-export const getAllContacts = async () => {
-  const contacts = await Contact.find();
-  return contacts;
+export const getAllContacts = async ({
+  page = 1,
+  perPage = 10,
+  sortOrder = SORT_ORDER.ASC,
+  sortBy = 'name',
+  filter = {},
+}) => {
+  const limit = perPage;
+  const skip = (page - 1) * perPage;
+
+  let contactsQuery = Contact.find(filter);
+
+  if (filter) {
+    contactsQuery = contactsQuery.find(filter);
+  }
+
+  if (sortBy) {
+    contactsQuery = contactsQuery.sort({
+      [sortBy]: sortOrder
+    });
+  }
+
+  const totalItems = await Contact.countDocuments(filter);
+  const contacts = await contactsQuery
+    .select('-__v')
+    .skip(skip)
+    .limit(limit)
+    .exec();
+
+  const paginationData = calculatePaginationData(totalItems, perPage, page);
+
+  return {
+    data: contacts,
+    ...paginationData,
+  };
 };
 
 export const getContactById = async (contactId) => {
@@ -12,10 +46,11 @@ export const getContactById = async (contactId) => {
 };
 
 export const createContact = async (payload) => {
-  const contact = await Contact.create(payload);
   if (!payload.name || !payload.phoneNumber) {
     throw createHttpError(400, 'Name and phoneNumber are required');
   }
+
+  const contact = await Contact.create(payload);
   return contact;
 };
 
