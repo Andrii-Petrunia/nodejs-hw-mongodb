@@ -10,25 +10,43 @@ import { parsePaginationParams } from '../utils/parsePaginationParams.js';
 import { parseSortParams } from '../utils/parseSortParams.js';
 import { parseFilterParams } from '../utils/parseFilterParams.js';
 
-export const getAllContactsController = async (req, res) => {
-  const { page, perPage } = parsePaginationParams(req.query);
-  const { sortBy, sortOrder } = parseSortParams(req.query);
-  const filter = parseFilterParams(req.query);
+const validSortFields = [
+  'name',
+  'phoneNumber',
+  'email',
+  'contactType',
+  'createdAt',
+  'updatedAt',
+];
 
-  const contacts = await getAllContacts({
-    page,
-    perPage,
-    sortBy,
-    sortOrder,
-    filter,
-  });
+export const getAllContactsController = async (req, res, next) => {
+  try {
+    const { page, perPage } = parsePaginationParams(req.query);
+    const { sortBy, sortOrder } = parseSortParams(req.query);
+    const filter = parseFilterParams(req.query);
 
-  res.status(200).json({
-    status: 200,
-    message: 'Successfully found contacts!',
-    ...contacts,
-  });
+    if (sortBy && !validSortFields.includes(sortBy)) {
+      return next(createHttpError(400, 'Invalid sortBy field'));
+    }
+
+    const contacts = await getAllContacts({
+      page,
+      perPage,
+      sortBy,
+      sortOrder,
+      filter,
+    });
+
+    res.status(200).json({
+      status: 200,
+      message: 'Successfully found contacts!',
+      ...contacts,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
+
 
 export const getContactByIdController = async (req, res) => {
   const { contactId } = req.params;

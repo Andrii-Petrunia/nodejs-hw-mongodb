@@ -1,3 +1,4 @@
+import createHttpError from 'http-errors';
 import { SORT_ORDER } from '../constants/index.js';
 
 const parseSortOrder = (sortOrder) => {
@@ -7,29 +8,26 @@ const parseSortOrder = (sortOrder) => {
 };
 
 const parseSortBy = (sortBy) => {
+  const keysOfContact = [
+    '_id',
+    'name',
+    'phoneNumber',
+    'email',
+    'contactType',
+    'createdAt',
+    'updatedAt',
+  ];
 
-    const keysOfContact = [
-      '_id',
-      'name',
-      'phoneNumber',
-      'email',
-      'contactType',
-      'createdAt',
-      'updatedAt',
-    ];
-
-
-  if (keysOfContact.includes(sortBy)) {
-    return sortBy;
+  if (!sortBy) return 'name';
+  if (!keysOfContact.includes(sortBy)) {
+    throw createHttpError(400, `Invalid sortBy field: ${sortBy}`);
   }
 
-
-  return 'name';
+  return sortBy;
 };
 
 export const parseSortParams = (query) => {
   const { sortOrder, sortBy } = query;
-
 
   const parsedSortOrder = parseSortOrder(sortOrder);
   const parsedSortBy = parseSortBy(sortBy);
