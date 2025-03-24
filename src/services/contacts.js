@@ -4,6 +4,7 @@ import { calculatePaginationData } from '../utils/calculatePaginationData.js';
 import { SORT_ORDER } from '../constants/index.js';
 
 export const getAllContacts = async ({
+  userId,
   page = 1,
   perPage = 10,
   sortOrder = SORT_ORDER.ASC,
@@ -13,19 +14,13 @@ export const getAllContacts = async ({
   const limit = perPage;
   const skip = (page - 1) * perPage;
 
-  let contactsQuery = Contact.find(filter);
-
-  if (filter) {
-    contactsQuery = contactsQuery.find(filter);
-  }
+  const contactsQuery = Contact.find({ userId, ...filter });
 
   if (sortBy) {
-    contactsQuery = contactsQuery.sort({
-      [sortBy]: sortOrder
-    });
+    contactsQuery.sort({ [sortBy]: sortOrder });
   }
 
-  const totalItems = await Contact.countDocuments(filter);
+  const totalItems = await Contact.countDocuments({ userId, ...filter });
   const contacts = await contactsQuery
     .select('-__v')
     .skip(skip)
@@ -40,9 +35,9 @@ export const getAllContacts = async ({
   };
 };
 
-export const getContactById = async (contactId) => {
-  const contact = await Contact.findById(contactId);
-  return contact;
+export const getContactById = async (contactId, userId) => {
+
+  return await Contact.findOne({ _id: contactId, userId });
 };
 
 export const createContact = async (payload) => {
@@ -50,26 +45,28 @@ export const createContact = async (payload) => {
     throw createHttpError(400, 'Name and phoneNumber are required');
   }
 
-  const contact = await Contact.create(payload);
-  return contact;
+
+  if (!payload.userId) {
+    throw createHttpError(400, 'UserId is required');
+  }
+
+  return await Contact.create(payload);
 };
 
-export const updateContact = async (contactId, payload, options = {}) => {
-  const updatedContact = await Contact.findOneAndUpdate(
-    { _id: contactId },
-    payload,
-    {
-      new: true,
-      ...options,
-    },
-  );
-  return updatedContact;
-};
+export const updateContact = async (
+  contactId,
+  payload,
+  userId,
+  options = {},
+) => {
 
-export const deleteContact = async (contactId) => {
-  const contact = await Contact.findOneAndDelete({
-    _id: contactId,
+  return await Contact.findOneAndUpdate({ _id: contactId, userId }, payload, {
+    new: true,
+    ...options,
   });
+};
 
-  return contact;
+export const deleteContact = async (contactId, userId) => {
+
+  return await Contact.findOneAndDelete({ _id: contactId, userId });
 };
