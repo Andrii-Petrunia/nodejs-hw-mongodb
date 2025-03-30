@@ -41,7 +41,15 @@ export const getAllContactsController = async (req, res, next) => {
     res.status(200).json({
       status: 200,
       message: 'Successfully found contacts!',
-      ...contacts,
+      data: {
+        data: contacts.data,
+        page: contacts.page,
+        perPage: contacts.perPage,
+        totalItems: contacts.totalItems,
+        totalPages: contacts.totalPages,
+        hasNextPage: contacts.hasNextPage,
+        hasPreviousPage: contacts.hasPreviousPage,
+      },
     });
   } catch (error) {
     next(error);
@@ -69,6 +77,7 @@ export const getContactByIdController = async (req, res, next) => {
 
 export const createContactController = async (req, res, next) => {
   try {
+
     const contact = await createContact({
       ...req.body,
       userId: req.user._id,
@@ -106,13 +115,15 @@ export const patchContactController = async (req, res, next) => {
 export const deleteContactController = async (req, res, next) => {
   try {
     const { contactId } = req.params;
-    const contact = await deleteContact(contactId, req.user._id); // 🔹 Добавляем userId
+    const contact = await deleteContact(contactId, req.user._id);
 
     if (!contact) {
       throw createHttpError(404, 'Contact not found or does not belong to you');
     }
 
-    res.status(204).send();
+    res
+      .status(204)
+      .json({ status: 204, message: 'Successfully deleted a contact!' });
   } catch (error) {
     next(error);
   }

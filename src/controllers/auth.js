@@ -14,7 +14,7 @@ export const registerUserController = async (req, res, next) => {
     delete userObject.password;
 
     res.status(201).json({
-      status: 'success',
+      status: 201,
       message: 'Successfully registered a user!',
       data: userObject,
     });
@@ -25,23 +25,30 @@ export const registerUserController = async (req, res, next) => {
 
 export const loginUserController = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    const { accessToken, refreshToken } = await loginUser(email, password);
+    const session = await loginUser(req.body);
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken', session.refreshToken, {
+      httpOnly: true,
+      expires: new Date(Date.now() + THIRTY_DAYS),
+    });
+
+    res.cookie('sessionId', session._id, {
       httpOnly: true,
       expires: new Date(Date.now() + THIRTY_DAYS),
     });
 
     res.status(200).json({
-      status: 'success',
+      status: 200,
       message: 'Successfully logged in an user!',
-      data: { accessToken },
+      data: {
+        accessToken: session.accessToken,
+      },
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 const setupSession = (res, session) => {
   res.cookie('refreshToken', session.refreshToken, {
@@ -55,9 +62,12 @@ const setupSession = (res, session) => {
 };
 
 export const refreshUserSessionController = async (req, res) => {
+const { sessionId } = req.cookies;
+const { refreshToken } = req.cookies;
+
   const session = await refreshUsersSession({
-    sessionId: req.cookies.sessionId,
-    refreshToken: req.cookies.refreshToken,
+    sessionId,
+    refreshToken,
   });
 
   setupSession(res, session);
@@ -72,8 +82,10 @@ export const refreshUserSessionController = async (req, res) => {
 };
 
 export const logoutUserController = async (req, res) => {
-  if (req.cookies.sessionId) {
-    await logoutUser(req.cookies.sessionId);
+  const { sessionId } = req.cookies;
+
+  if (sessionId) {
+    await logoutUser(sessionId);
   }
 
   res.clearCookie('sessionId');

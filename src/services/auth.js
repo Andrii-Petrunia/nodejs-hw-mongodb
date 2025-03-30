@@ -17,7 +17,7 @@ export const registerUser = async (payload) => {
   });
 };
 
-export const loginUser = async (email, password) => {
+export const loginUser = async ({ email, password }) => {
   const user = await User.findOne({ email });
   if (!user) {
     throw createHttpError(401, 'Invalid email or password');
@@ -28,12 +28,12 @@ export const loginUser = async (email, password) => {
     throw createHttpError(401, 'Invalid email or password');
   }
 
-  await Session.deleteOne({ userId: user._id });
+  await Session.deleteMany({ userId: user._id });
 
   const accessToken = randomBytes(30).toString('base64');
   const refreshToken = randomBytes(30).toString('base64');
 
-  await Session.create({
+  const session = await Session.create({
     userId: user._id,
     accessToken,
     refreshToken,
@@ -41,7 +41,7 @@ export const loginUser = async (email, password) => {
     refreshTokenValidUntil: new Date(Date.now() + THIRTY_DAYS),
   });
 
-  return { accessToken, refreshToken };
+  return session;
 };
 
 const createSession = () => {
