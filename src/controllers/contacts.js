@@ -9,6 +9,8 @@ import {
 import { parsePaginationParams } from '../utils/parsePaginationParams.js';
 import { parseSortParams } from '../utils/parseSortParams.js';
 import { parseFilterParams } from '../utils/parseFilterParams.js';
+import { saveFileToCloudinary } from '../utils/saveFileToCloudinary.js';
+import { getEnvVar } from '../utils/getEnvVar.js';
 
 const validSortFields = [
   'name',
@@ -77,10 +79,17 @@ export const getContactByIdController = async (req, res, next) => {
 
 export const createContactController = async (req, res, next) => {
   try {
+    const photo = req.file;
+    let photoUrl = null;
+
+    if (photo && getEnvVar('ENABLE_CLOUDINARY') === 'true') {
+      photoUrl = await saveFileToCloudinary(photo);
+    }
 
     const contact = await createContact({
       ...req.body,
       userId: req.user._id,
+      photo: photoUrl,
     });
 
     res.status(201).json({
@@ -96,7 +105,21 @@ export const createContactController = async (req, res, next) => {
 export const patchContactController = async (req, res, next) => {
   try {
     const { contactId } = req.params;
-    const contact = await updateContact(contactId, req.body, req.user._id);
+    const photo = req.file;
+    let photoUrl = null;
+
+    if (photo && getEnvVar('ENABLE_CLOUDINARY') === 'true') {
+      photoUrl = await saveFileToCloudinary(photo);
+    }
+
+    const contact = await updateContact(
+      contactId,
+      {
+        ...req.body,
+        ...(photoUrl ? { photo: photoUrl } : {}),
+      },
+      req.user._id,
+    );
 
     if (!contact) {
       throw createHttpError(404, 'Contact not found or does not belong to you');

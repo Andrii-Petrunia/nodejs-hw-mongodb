@@ -1,3 +1,10 @@
+import jwt from 'jsonwebtoken';
+import handlebars from 'handlebars';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { getEnvVar } from '../utils/getEnvVar.js';
+import { sendEmail } from '../utils/sendMail.js';
+import { SMTP, TEMPLATES_DIR } from '../constants/index.js';
 import { randomBytes } from 'crypto';
 import { FIFTEEN_MINUTES, THIRTY_DAYS } from '../constants/index.js';
 import bcrypt from 'bcrypt';
@@ -86,3 +93,66 @@ export const refreshUsersSession = async ({ sessionId, refreshToken }) => {
 export const logoutUser = async (sessionId) => {
   await Session.deleteOne({ _id: sessionId });
 };
+
+export const requestResetToken = async (email) => {
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+
+  const token = jwt.sign({ email, sub: user._id }, getEnvVar('JWT_SECRET'), {
+    expiresIn: '5m',
+  });
+
+  const resetLink = `${getEnvVar('APP_DOMAIN')}/reset-password?token=${token}`;
+
+  const templatePath = path.join(TEMPLATES_DIR, 'reset-password-email.html');
+  const templateSource = (await fs.readFile(templatePath)).toString();
+  const template = handlebars.compile(templateSource);
+  const html = template({
+    name: user.name,
+    link: resetLink,
+  });
+
+  try {
+    await sendEmail({
+      from: getEnvVar(SMTP.SMTP_FROM),
+      to: email,
+      subject: 'Reset your password',
+      html,
+    });
+  } catch {
+    throw createHttpError(
+      500,
+      'Failed to send the email, please try again later.',
+    );
+  }
+};
+
+export const resetPassword = async (payload) => {
+  let entries;
+
+  try {
+    entries = jwt.verify(payload.token, getEnvVar('JWT_SECRET'));
+  } catch (err) {
+    if (err instanceof Error) throw createHttpError(401, err.message);
+    throw err;
+  }
+
+  const user = await User.findOne({
+    email: entries.email,
+    _id: entries.sub,
+  });
+
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+
+  const encryptedPassword = await bcrypt.hash(payload.password, 10);
+
+  await Session.deleteMany({ userId: user._id });
+
+  await User.updateOne({ _id: user._id }, { password: encryptedPassword });
+};
+
