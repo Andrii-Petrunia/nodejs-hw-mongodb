@@ -6,6 +6,7 @@ import { getEnvVar } from './utils/getEnvVar.js';
 import router from './routers/index.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
+import { swaggerDocs } from './middlewares/swaggerDocs.js';
 
 const PORT = Number(getEnvVar('PORT', '3000'));
 
@@ -22,6 +23,8 @@ export const setupServer = () => {
       },
     }),
   );
+
+  app.use('/api-docs', swaggerDocs());
 
   app.use(router);
 
