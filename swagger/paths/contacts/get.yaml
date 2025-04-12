@@ -28,16 +28,6 @@ parameters:
       type: string
       enum: [asc, desc]
     example: asc
-  - in: query
-    name: name
-    schema:
-      type: string
-    example: 'John'
-  - in: query
-    name: phoneNumber
-    schema:
-      type: string
-    example: '+380991234567'
 responses:
   '200':
     description: Successfully found contacts!
