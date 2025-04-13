@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "https://nodejs-hw-mongodb-12-clb7.onrender.com"
+      "url": "/"
     }
   ],
   "tags": [
