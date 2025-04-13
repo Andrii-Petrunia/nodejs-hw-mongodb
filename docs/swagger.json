@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "/"
+      "url": "https://nodejs-hw-mongodb-14-bl7v.onrender.com"
     }
   ],
   "tags": [
